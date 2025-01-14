@@ -1,10 +1,3 @@
-#!/usr/bin/env python3
-"""
-Created on Mon Feb 26 17:21:33 2024
-
-@author: rdm4317
-"""
-
 from cyIpoptSetup import CyIpoptWrapper
 from optimise import OptimisationLoop
 import time
@@ -23,7 +16,7 @@ for i in range(continuationSteps):
 
     # initialise optimisation class
     optimisationClass = OptimisationLoop()
-    optimisationClass.maximumNumberOfIterations = 50
+    optimisationClass.maximumNumberOfIterations = 20
     optimisationClass.beta = betaContinuationList[i]
 
     # determine if this is the first iteration of continuation
@@ -53,4 +46,4 @@ for i in range(continuationSteps):
     constraintScaling = optimisationClass.constraintScaling
     jacobianScaling = optimisationClass.jacobianScaling
 end = time.time()
-print("Total time ", (end- start))
+print("Total time ", (end - start))
