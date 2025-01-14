@@ -11,9 +11,9 @@ rhoOptimal = None
 gradientScaling = None
 constraintScaling = None
 jacobianScaling = None
-
+contime = [0 * i for i in range(continuationSteps)]
 for i in range(continuationSteps):
-
+    cont_start = time.time()
     # initialise optimisation class
     optimisationClass = OptimisationLoop()
     optimisationClass.maximumNumberOfIterations = 20
@@ -45,5 +45,8 @@ for i in range(continuationSteps):
     gradientScaling = optimisationClass.gradientScaling
     constraintScaling = optimisationClass.constraintScaling
     jacobianScaling = optimisationClass.jacobianScaling
+    cont_end = time.time()
+    contime[i] = cont_end - cont_start
 end = time.time()
 print("Total time ", (end - start))
+print("Cont time ", contime)
