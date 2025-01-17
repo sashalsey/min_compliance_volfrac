@@ -72,7 +72,10 @@ class ForwardSolve:
 
         self.stressFile = VTKFile(self.outputFolder + "stress.pvd")
         self.stressFunction = fd.Function(self.functionSpace, name="stress")
-
+        
+        self.resultsFile = open(self.outputFolder + "iteration_results.txt", "w")
+        self.resultsFile.write("Compliance\tVolume Fraction\tMax Stress\n")
+        self.resultsFile.close()
     ###############################################################################
     def ComputeInitialSolution(self):
 
@@ -103,8 +106,7 @@ class ForwardSolve:
                 cache = True
 
             else:
-                # new array is unique
-                # assign current array to cache
+                # new array is unique, assign current array to cache
                 self.rho_np_previous = designVariables
 
                 # update self.rho
@@ -116,8 +118,7 @@ class ForwardSolve:
         return cache
 
     def Solve(self, designVariables):
-        # insert and cache design variables
-        # automatically updates self.rho
+        # insert and cache design variables, automatically updates self.rho
         identicalVariables = self.CacheDesignVariables(designVariables) # have they already been calcd
 
         if identicalVariables is False:
@@ -139,7 +140,6 @@ class ForwardSolve:
                 - fd.dot(fd.jump(v, n), fd.avg(fd.grad(u))) * fd.dS
                 + alpha / h_avg * fd.dot(fd.jump(v, n), fd.jump(u, n)) * fd.dS
             ) + fd.inner(u, v) * fd.dx
-
             #a = (fd.inner((self.helmholtzFilterRadius**2)*fd.grad(u),fd.grad(v))*fd.dx +fd.inner(u,v)*fd.dx)
             L = fd.inner(self.rho, v) * fd.dx
 
@@ -170,8 +170,7 @@ class ForwardSolve:
                     fd.as_vector([0, 0, 0]),),
                 fd.as_vector([0, 0, 0]),)
 
-            # elasticity parameters
-            # SIMP based E
+            # elasticity parameters, SIMP based E
             self.E = self.E0 + (self.E1 - self.E0) * (self.rho_hat**self.penalisationExponent)
             lambda_ = self.E*self.nu/((1.0 + self.nu)*(1.0 -2.0*self.nu))     # Lambda
             mu = (self.E) / (2 * (1 + self.nu))
@@ -205,24 +204,31 @@ class ForwardSolve:
             von_mises_proj = fd.project(von_mises_stress, DG0)
             self.stressFunction.assign(von_mises_proj)
             self.stressFile.write(self.stressFunction)
-            
+            max_stress = np.max(von_mises_proj.vector().get_local())
+            self.stressFunction.assign(von_mises_proj)
+            self.stressFile.write(self.stressFunction)
+
             # assemble objective function
             self.j = fd.assemble(fd.inner(T_1, u) * fd.ds(2))
 
             # volume fraction constraint
-            self.c1 = self.Vlimit - ((1 / self.meshVolume) * fd.assemble(self.rho_hat * fd.dx))
-            print("Volume fraction:", ((1 / self.meshVolume) * fd.assemble(self.rho_hat * fd.dx)))
+            volume_fraction = ((1 / self.meshVolume) * fd.assemble(self.rho_hat * fd.dx))
+            self.c1 = self.Vlimit - volume_fraction
+            
             # compute objective function sensitivities
             self.djdrho = (fda.compute_gradient(self.j, fda.Control(self.rho)).vector().get_local()) / self.gradientScale
+            
             # compute constraint sensitivities
             self.dc1drho = (fda.compute_gradient(self.c1, fda.Control(self.rho)).vector().get_local()) / self.gradientScale
 
             # assemble constraint vector
             self.c = np.array([self.c1])
 
-            # assemble jacobian vector
-            # self.dcdrho = np.concatenate((self.dc1drho, self.dc2drho))
+            # assemble jacobian vector. np.concatenate((self.dc1drho, self.dc2drho))
             self.dcdrho = self.dc1drho
+
+            with open(self.outputFolder + "iteration_results.txt", "a") as log_file:
+                log_file.write(f"{self.j:.3e}\t{volume_fraction:.4f}\t{max_stress:.2e}\n")
 
         else:
             pass
