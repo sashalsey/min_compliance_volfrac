@@ -1,10 +1,15 @@
 import datetime 
 import numpy as np # type: ignore
 import sys
+from finiteDifferenceValidation import FiniteDifferenceValidation
 from forwardSolve import ForwardSolve
 
 class OptimisationLoop:
     def __init__(self):
+
+        # optimisation parameters
+        # self.maximumNumberOfIterations = 50
+
         # density field bounds
         self.lowerBound = 0
         self.upperBound = 1
@@ -15,6 +20,9 @@ class OptimisationLoop:
 
         # output folder
         self.outputFolder = ("results/TO" + datetime.datetime.now().strftime("%y_%m-%d-%H-%M-%S") + "/")
+
+        # finite-difference test flag
+        self.finiteDifferenceValidation = False
 
         # variable initialisation
         self.variableInitialisation = False
@@ -45,6 +53,12 @@ class OptimisationLoop:
 
         # perform initial cache of design variables
         self.ForwardSolve.CacheDesignVariables(None, initialise=True)
+
+        if self.finiteDifferenceValidation is True:
+            FiniteDifferenceValidation(self)
+            sys.exit()
+        else:
+            pass
 
         # execute initial forward solve (various parameters derived)
         self.j, self.djdrho, self.c, self.dcdrho = self.ForwardSolve.Solve(self.designVariables0)

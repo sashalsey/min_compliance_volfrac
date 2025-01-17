@@ -18,7 +18,7 @@ class ForwardSolve:
 
         # material properties
         self.E0 = 1e-6  # [Pa] # void
-        self.E1 = 3000e6  # [Pa] # dense
+        self.E1 = 2.7e9  # [Pa] # dense
         self.nu = 0.3  # []
 
         # pseudo-density functional
@@ -35,8 +35,8 @@ class ForwardSolve:
 
         # mesh, functionals and associated static parameters
         # generate mesh
-        self.nx, self.ny, self.nz = 30, 10, 5
-        self.lx, self.ly, self.lz = 0.3, 0.1, 0.05
+        self.nx, self.ny, self.nz = 20, 10, 5
+        self.lx, self.ly, self.lz = 0.2, 0.1, 0.05
         self.cellsize = self.lx / self.nx
         self.GenerateMesh()
 
@@ -70,12 +70,10 @@ class ForwardSolve:
         self.uFile = VTKFile(self.outputFolder + "u.pvd")
         self.uFunction = fd.Function(self.vectorFunctionSpace, name="u")
 
-        self.stressFile = VTKFile(self.outputFolder + "stress.pvd")
-        self.stressFunction = fd.Function(self.functionSpace, name="stress")
-        
         self.resultsFile = open(self.outputFolder + "iteration_results.txt", "w")
         self.resultsFile.write("Compliance\tVolume Fraction\tMax Stress\n")
         self.resultsFile.close()
+
     ###############################################################################
     def ComputeInitialSolution(self):
 
@@ -118,7 +116,8 @@ class ForwardSolve:
         return cache
 
     def Solve(self, designVariables):
-        # insert and cache design variables, automatically updates self.rho
+        # insert and cache design variables
+        # automatically updates self.rho
         identicalVariables = self.CacheDesignVariables(designVariables) # have they already been calcd
 
         if identicalVariables is False:
@@ -126,21 +125,20 @@ class ForwardSolve:
             # Helmholtz Filter
             u = fd.TrialFunction(self.functionSpace)
             v = fd.TestFunction(self.functionSpace)
-            
-            # weak variational form
+
             # DG specific relations
             n = fd.FacetNormal(self.mesh)
             h = 2 * fd.CellDiameter(self.mesh)
             h_avg = (h("+") + h("-")) / 2
             alpha = 1
 
+            # weak variational form
             a = (fd.Constant(self.helmholtzFilterRadius) ** 2) * (
                 fd.dot(fd.grad(v), fd.grad(u)) * fd.dx
                 - fd.dot(fd.avg(fd.grad(v)), fd.jump(u, n)) * fd.dS
                 - fd.dot(fd.jump(v, n), fd.avg(fd.grad(u))) * fd.dS
                 + alpha / h_avg * fd.dot(fd.jump(v, n), fd.jump(u, n)) * fd.dS
             ) + fd.inner(u, v) * fd.dx
-            #a = (fd.inner((self.helmholtzFilterRadius**2)*fd.grad(u),fd.grad(v))*fd.dx +fd.inner(u,v)*fd.dx)
             L = fd.inner(self.rho, v) * fd.dx
 
             # solve helmholtz equation
@@ -161,7 +159,7 @@ class ForwardSolve:
 
             # define surface traction
             x, y, z = fd.SpatialCoordinate(self.mesh)
-            T_1 = fd.conditional(fd.gt(x, self.lx - self.cellsize),
+            T = fd.conditional(fd.gt(x, self.lx - self.cellsize),
                     fd.conditional(fd.gt(y, self.ly / 2 - self.cellsize),
                     fd.conditional(
                         fd.lt(y, self.ly / 2 + self.cellsize),
@@ -180,7 +178,7 @@ class ForwardSolve:
 
             # linear elastic weak variational form
             a = fd.inner(sigma(u), epsilon(v)) * fd.dx
-            L = fd.dot(T_1, v) * fd.ds(2)
+            L = fd.dot(T, v) * fd.ds(2)
 
             # solve
             u = fd.Function(self.vectorFunctionSpace)
@@ -202,19 +200,15 @@ class ForwardSolve:
 
             von_mises_stress = fd.sqrt(0.5 * ((sigma_xx - sigma_yy)**2 + (sigma_yy - sigma_zz)**2 + (sigma_zz - sigma_xx)**2 + 6 * (tau_xy**2 + tau_yz**2 + tau_zx**2)))
             von_mises_proj = fd.project(von_mises_stress, DG0)
-            self.stressFunction.assign(von_mises_proj)
-            self.stressFile.write(self.stressFunction)
             max_stress = np.max(von_mises_proj.vector().get_local())
-            self.stressFunction.assign(von_mises_proj)
-            self.stressFile.write(self.stressFunction)
-
+            
             # assemble objective function
-            self.j = fd.assemble(fd.inner(T_1, u) * fd.ds(2))
+            self.j = fd.assemble(fd.inner(T, u) * fd.ds(2))
 
             # volume fraction constraint
             volume_fraction = ((1 / self.meshVolume) * fd.assemble(self.rho_hat * fd.dx))
             self.c1 = self.Vlimit - volume_fraction
-            
+
             # compute objective function sensitivities
             self.djdrho = (fda.compute_gradient(self.j, fda.Control(self.rho)).vector().get_local()) / self.gradientScale
             
@@ -224,11 +218,11 @@ class ForwardSolve:
             # assemble constraint vector
             self.c = np.array([self.c1])
 
-            # assemble jacobian vector. np.concatenate((self.dc1drho, self.dc2drho))
+            # assemble jacobian vector, np.concatenate((self.dc1drho, self.dc2drho))
             self.dcdrho = self.dc1drho
 
             with open(self.outputFolder + "iteration_results.txt", "a") as log_file:
-                log_file.write(f"{self.j:.3e}\t{volume_fraction:.4f}\t{max_stress:.2e}\n")
+                log_file.write(f"{self.j:.3e}\t{volume_fraction:.4f}\t{max_stress:.3e}\n")
 
         else:
             pass
