@@ -11,6 +11,12 @@ rhoOptimal = None
 gradientScaling = None
 constraintScaling = None
 jacobianScaling = None
+
+outputFolder2 = ("results/")
+resultsFile = open(outputFolder2 + "combined_iteration_results.txt", "w")
+resultsFile.write("Compliance\tVolume Fraction\tMax Stress\n")
+resultsFile.close()
+
 contime = [0 * i for i in range(continuationSteps)]
 for i in range(continuationSteps):
     cont_start = time.time()

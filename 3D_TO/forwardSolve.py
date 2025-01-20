@@ -6,10 +6,11 @@ import firedrake.adjoint as fda # type: ignore
 fda.continue_annotation()
 
 class ForwardSolve:
-    def __init__(self, outputFolder, beta, penalisationExponent, variableInitialisation, rho0):
+    def __init__(self, outputFolder, outputFolder2, beta, penalisationExponent, variableInitialisation, rho0):
 
         # append inputs to class
         self.outputFolder = outputFolder
+        self.outputFolder2 = outputFolder2
 
         # rho initialisation
         self.variableInitialisation = variableInitialisation
@@ -32,9 +33,7 @@ class ForwardSolve:
         self.gradientScale = (self.nx * self.ny * self.nz) / (self.lx * self.ly * self.lz)  # firedrake bug?
 
     def Setup(self):
-
         # mesh, functionals and associated static parameters
-        # generate mesh
         self.nx, self.ny, self.nz = 20, 10, 5
         self.lx, self.ly, self.lz = 0.2, 0.1, 0.05
         self.cellsize = self.lx / self.nx
@@ -57,22 +56,16 @@ class ForwardSolve:
         self.helmholtzFilterRadius = 1 * (self.meshVolume / self.mesh.num_cells()) ** (1 / self.mesh.cell_dimension())
 
         # boundary conditions
-        # add new boundary conditions by adding new key to dict
         bcDict = {}
         bcDict[0] = fd.DirichletBC(self.vectorFunctionSpace, fd.Constant((0, 0, 0)), 1)
         self.bcs = [bcDict[i] for i in range(len(bcDict.keys()))]
 
         # define output files
-        # projected psuedo-density output file
         self.rho_hatFile = VTKFile(self.outputFolder + "rho_hat.pvd")
         self.rho_hatFunction = fd.Function(self.functionSpace, name="rho_hat")
 
         self.uFile = VTKFile(self.outputFolder + "u.pvd")
         self.uFunction = fd.Function(self.vectorFunctionSpace, name="u")
-
-        self.resultsFile = open(self.outputFolder + "iteration_results.txt", "w")
-        self.resultsFile.write("Compliance\tVolume Fraction\tMax Stress\n")
-        self.resultsFile.close()
 
     ###############################################################################
     def ComputeInitialSolution(self):
@@ -221,7 +214,7 @@ class ForwardSolve:
             # assemble jacobian vector, np.concatenate((self.dc1drho, self.dc2drho))
             self.dcdrho = self.dc1drho
 
-            with open(self.outputFolder + "iteration_results.txt", "a") as log_file:
+            with open(self.outputFolder2 + "combined_iteration_results.txt", "a") as log_file:
                 log_file.write(f"{self.j:.3e}\t{volume_fraction:.4f}\t{max_stress:.3e}\n")
 
         else:
