@@ -4,20 +4,28 @@ import time
 start = time.time()
 # continuation loop
 continuationSteps = 4
-betaContinuationList = [2 ** (i + 1) for i in range(continuationSteps)]
+betaContinuationList = [2,4,8,8] #[2 ** (i + 1) for i in range(continuationSteps)]
+pnormList = [10, 20, 40, 40]
 
 # flake8 initialisation bug
 rhoOptimal = None
 gradientScaling = None
 constraintScaling = None
 jacobianScaling = None
+
+outputFolder2 = ("results/")
+resultsFile = open(outputFolder2 + "combined_iteration_results.txt", "w")
+resultsFile.write("Compliance\tVolume Fraction\tMax Stress\n")
+resultsFile.close()
+
 contime = [0 * i for i in range(continuationSteps)]
 for i in range(continuationSteps):
     cont_start = time.time()
     # initialise optimisation class
     optimisationClass = OptimisationLoop()
-    optimisationClass.maximumNumberOfIterations = 20
+    optimisationClass.maximumNumberOfIterations = 50
     optimisationClass.beta = betaContinuationList[i]
+    optimisationClass.pnorm = pnormList[i]
 
     # determine if this is the first iteration of continuation
     if i == 0:
@@ -50,3 +58,5 @@ for i in range(continuationSteps):
 end = time.time()
 print("Total time ", (end - start))
 print("Cont time ", contime)
+from plot import plot
+plot()

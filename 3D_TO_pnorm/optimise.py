@@ -12,10 +12,12 @@ class OptimisationLoop:
 
         # continuation parameters
         self.beta = None
+        self.pnorm = None
         self.penalisationExponent = 3  # fixed at present
 
         # output folder
         self.outputFolder = ("results/TO" + datetime.datetime.now().strftime("%y_%m-%d-%H-%M-%S") + "/")
+        self.outputFolder2 = ("results/")
 
         # finite-difference test flag
         self.finiteDifferenceValidation = False
@@ -35,10 +37,12 @@ class OptimisationLoop:
         # initialise forward solve class
         self.ForwardSolve = ForwardSolve(
             self.outputFolder,
+            self.outputFolder2,
             self.beta,
             self.penalisationExponent,
             self.variableInitialisation,
-            self.rho0,)
+            self.rho0,
+            self.pnorm,)
 
         # setup forward solve (mesh, function spaces, boundary conditions etc)
         # mesh: needs changing

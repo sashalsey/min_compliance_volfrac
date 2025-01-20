@@ -6,9 +6,10 @@ import firedrake.adjoint as fda # type: ignore
 fda.continue_annotation()
 
 class ForwardSolve:
-    def __init__(self, outputFolder, beta, penalisationExponent, variableInitialisation, rho0):
+    def __init__(self, outputFolder, outputFolder2, beta, penalisationExponent, variableInitialisation, rho0, pnorm):
         # append inputs to class
         self.outputFolder = outputFolder
+        self.outputFolder2 = outputFolder2
 
         # rho initialisation
         self.variableInitialisation = variableInitialisation
@@ -25,6 +26,8 @@ class ForwardSolve:
         self.eta0 = 0.5  # midpoint of projection filter
 
         self.Vlimit = 0.3
+        self.Slimit = 20e6
+        self.pnorm = pnorm
 
     def GenerateMesh(self,):
         self.mesh = fd.BoxMesh(self.nx, self.ny, self.nz, self.lx, self.ly, self.lz, hexahedral=False, diagonal='default')
@@ -67,10 +70,6 @@ class ForwardSolve:
 
         self.stressFile = VTKFile(self.outputFolder + "stress.pvd")
         self.stressFunction = fd.Function(self.functionSpace, name="stress")
-
-        self.resultsFile = open(self.outputFolder + "iteration_results.txt", "w")
-        self.resultsFile.write("Max Stress (Pa)\tVolume Fraction\tCompliance\tStress integral\n")
-        self.resultsFile.close()
 
     ###############################################################################
     def ComputeInitialSolution(self):
@@ -164,7 +163,7 @@ class ForwardSolve:
                         fd.as_vector([0, 0, 0]),),
                     fd.as_vector([0, 0, 0]),),
                 fd.as_vector([0, 0, 0]),)
-            #T = fd.as_vector([0,-30,0])
+
             # elasticity parameters
             self.E = self.E0 + (self.E1 - self.E0) * (self.rho_hat ** self.penalisationExponent)
             lambda_ = self.E * self.nu/((1.0 + self.nu)*(1.0 - 2.0 * self.nu))     # Lambda
@@ -185,40 +184,43 @@ class ForwardSolve:
             self.uFunction.assign(u)
             self.uFile.write(self.uFunction)
 
+            # stress plot
+            stress_space = fd.TensorFunctionSpace(self.mesh, "CG", degree=1)
+            stress_tensor = sigma(u)
+            stress_projected = fd.project(stress_tensor, stress_space)
+
+            stress_function = fd.Function(stress_space, name="Stress Tensor")
+            stress_function.assign(stress_projected)
+            vtkfile = fd.VTKFile(self.outputFolder + "stress_tensor.pvd")
+            vtkfile.write(stress_function)
+            
             # stress calculation
             DG0 = fd.FunctionSpace(self.mesh, "DG", 0)
 
             sigma_xx = fd.project(sigma(u)[0, 0], DG0)
             sigma_yy = fd.project(sigma(u)[1, 1], DG0)
             sigma_zz = fd.project(sigma(u)[2, 2], DG0)
-            tau_xy = fd.project(sigma(u)[0, 1], DG0)
-            tau_yz = fd.project(sigma(u)[1, 2], DG0)
-            tau_zx = fd.project(sigma(u)[2, 0], DG0)
+            sigma_xy = fd.project(sigma(u)[0, 1], DG0)
+            sigma_yz = fd.project(sigma(u)[1, 2], DG0)
+            sigma_zx = fd.project(sigma(u)[2, 0], DG0)
 
-            von_mises_stress = fd.sqrt(0.5 * ((sigma_xx - sigma_yy)**2 + (sigma_yy - sigma_zz)**2 + (sigma_zz - sigma_xx)**2 + 6 * (tau_xy**2 + tau_yz**2 + tau_zx**2)))
+            von_mises_stress = fd.sqrt(0.5 * ((sigma_xx - sigma_yy)**2 + (sigma_yy - sigma_zz)**2 + (sigma_zz - sigma_xx)**2 + 6 * (sigma_xy**2 + sigma_yz**2 + sigma_zx**2)))
             von_mises_proj = fd.project(von_mises_stress, DG0)
-            max_stress = np.max(von_mises_proj.vector().get_local())
-            print("Max stress ", max_stress)
-
             self.stressFunction.assign(von_mises_proj)
             self.stressFile.write(self.stressFunction)
+            max_stress = np.max(von_mises_proj.vector().get_local())
 
             # assemble objective function
             self.j = fd.assemble(fd.inner(T, u) * fd.ds(2))
-            # print("self.j is ", self.j)
+
             # volume fraction constraint
-            volumefraction = ((1 / self.meshVolume) * fd.assemble(self.rho_hat * fd.dx))
-            self.c1 = self.Vlimit - volumefraction
-            # print("Volume fraction:", volumefraction)
-            
-            self.Slimit = 20e6
-            self.p_norm = 12
-            stressintegral = (fd.assemble((von_mises_stress ** self.p_norm) * self.rho_hat * fd.dx)) ** (1/self.p_norm)
+            volume_fraction = ((1 / self.meshVolume) * fd.assemble(self.rho_hat * fd.dx))
+            self.c1 = self.Vlimit - volume_fraction
+
+            # sshould this be the stress_tensor? It doesn't work as it needs a scalar for assemble
+            stressintegral = fd.assemble( ((stress_tensor ** self.pnorm) * self.rho_hat * fd.dx) ) ** (1/self.pnorm)
             self.c2 = self.Slimit - stressintegral
             print("Stress integral ", stressintegral)
-
-            with open(self.outputFolder + "iteration_results.txt", "a") as log_file:
-                log_file.write(f"{max_stress:.2e}\t{volumefraction:.4f}\t{self.j:.3e}\t{stressintegral:.3e}\n")
 
             # compute objective function sensitivities
             self.djdrho = (fda.compute_gradient(self.j, fda.Control(self.rho)).vector().get_local()) / self.gradientScale
@@ -230,6 +232,9 @@ class ForwardSolve:
 
             # assemble jacobian vector
             self.dcdrho = np.concatenate((self.dc1drho, self.dc2drho))
+
+            with open(self.outputFolder2 + "combined_iteration_results.txt", "a") as log_file:
+                log_file.write(f"{self.j:.3e}\t{volume_fraction:.4f}\t{max_stress:.3e}\n")
 
         else:
             pass
