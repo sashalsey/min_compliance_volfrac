@@ -1,0 +1,28 @@
+    Calculates stress via TensorFunctionSpace rather than functionSpace, this only seems to affect how I can view it in paraview       
+            # stress calculation
+            stress_space = fd.TensorFunctionSpace(self.mesh, "CG", degree=1)
+            stress_tensor = sigma(u)
+            stress_projected = fd.project(stress_tensor, stress_space)
+
+            stress_function = fd.Function(stress_space, name="Stress Tensor")
+            stress_function.assign(stress_projected)
+            vtkfile = fd.VTKFile(self.outputFolder + "stress_tensor.pvd")
+            vtkfile.write(stress_function)
+
+            stress_tensor = fd.project(sigma(u), stress_space)
+
+        # Compute von Mises stress
+            stress_components = stress_tensor  # The stress tensor as a Function in the TensorFunctionSpace
+            sigma_xx = stress_components[0, 0]
+            sigma_yy = stress_components[1, 1]
+            sigma_zz = stress_components[2, 2]
+            tau_xy = stress_components[0, 1]
+            tau_yz = stress_components[1, 2]
+            tau_zx = stress_components[2, 0]
+
+            von_mises_stress = fd.sqrt(0.5 * ((sigma_xx - sigma_yy)**2 +(sigma_yy - sigma_zz)**2 +(sigma_zz - sigma_xx)**2 +6 * (tau_xy**2 + tau_yz**2 + tau_zx**2)))
+
+            DG0 = fd.FunctionSpace(self.mesh, "DG", 0)  # Discontinuous Galerkin space
+            von_mises_projected = fd.project(von_mises_stress, DG0)
+
+            max_stress = np.max(von_mises_projected.vector().get_local())

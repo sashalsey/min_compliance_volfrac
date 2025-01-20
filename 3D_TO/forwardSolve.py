@@ -67,6 +67,9 @@ class ForwardSolve:
         self.uFile = VTKFile(self.outputFolder + "u.pvd")
         self.uFunction = fd.Function(self.vectorFunctionSpace, name="u")
 
+        self.stressFile = VTKFile(self.outputFolder + "stress.pvd")
+        self.stressFunction = fd.Function(self.functionSpace, name="stress")
+
     ###############################################################################
     def ComputeInitialSolution(self):
 
@@ -187,14 +190,16 @@ class ForwardSolve:
             sigma_xx = fd.project(sigma(u)[0, 0], DG0)
             sigma_yy = fd.project(sigma(u)[1, 1], DG0)
             sigma_zz = fd.project(sigma(u)[2, 2], DG0)
-            tau_xy = fd.project(sigma(u)[0, 1], DG0)
-            tau_yz = fd.project(sigma(u)[1, 2], DG0)
-            tau_zx = fd.project(sigma(u)[2, 0], DG0)
+            sigma_xy = fd.project(sigma(u)[0, 1], DG0)
+            sigma_yz = fd.project(sigma(u)[1, 2], DG0)
+            sigma_zx = fd.project(sigma(u)[2, 0], DG0)
 
-            von_mises_stress = fd.sqrt(0.5 * ((sigma_xx - sigma_yy)**2 + (sigma_yy - sigma_zz)**2 + (sigma_zz - sigma_xx)**2 + 6 * (tau_xy**2 + tau_yz**2 + tau_zx**2)))
+            von_mises_stress = fd.sqrt(0.5 * ((sigma_xx - sigma_yy)**2 + (sigma_yy - sigma_zz)**2 + (sigma_zz - sigma_xx)**2 + 6 * (sigma_xy**2 + sigma_yz**2 + sigma_zx**2)))
             von_mises_proj = fd.project(von_mises_stress, DG0)
+            self.stressFunction.assign(von_mises_proj)
+            self.stressFile.write(self.stressFunction)
             max_stress = np.max(von_mises_proj.vector().get_local())
-            
+
             # assemble objective function
             self.j = fd.assemble(fd.inner(T, u) * fd.ds(2))
 

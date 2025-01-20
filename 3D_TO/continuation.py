@@ -1,7 +1,7 @@
 from cyIpoptSetup import CyIpoptWrapper
 from optimise import OptimisationLoop
 import time
-from plot import plot
+
 start = time.time()
 # continuation loop
 continuationSteps = 4
@@ -57,5 +57,5 @@ for i in range(continuationSteps):
 end = time.time()
 print("Total time ", (end - start))
 print("Cont time ", contime)
-
+from plot import plot
 plot()
