@@ -29,13 +29,14 @@ class ForwardSolve:
         self.Vlimit = 0.3
 
     def GenerateMesh(self,):
-        self.mesh = fd.BoxMesh(self.nx, self.ny, self.nz, self.lx, self.ly, self.lz, hexahedral=False, diagonal='default')
+        self.mesh = fd.Mesh('cylinder.msh')
+        #self.mesh = fd.BoxMesh(self.nx, self.ny, self.nz, self.lx, self.ly, self.lz, hexahedral=False, diagonal='default')
         self.gradientScale = (self.nx * self.ny * self.nz) / (self.lx * self.ly * self.lz)  # firedrake bug?
 
     def Setup(self):
         # mesh, functionals and associated static parameters
-        self.nx, self.ny, self.nz = 20, 10, 5
-        self.lx, self.ly, self.lz = 0.2, 0.1, 0.05
+        self.nx, self.ny, self.nz = 20, 20, 20
+        self.lx, self.ly, self.lz = 0.24, 0.24, 0.1
         self.cellsize = self.lx / self.nx
         self.GenerateMesh()
 
@@ -155,6 +156,7 @@ class ForwardSolve:
 
             # define surface traction
             x, y, z = fd.SpatialCoordinate(self.mesh)
+            '''
             T = fd.conditional(fd.gt(x, self.lx - self.cellsize),
                     fd.conditional(fd.gt(y, self.ly / 2 - self.cellsize),
                     fd.conditional(
@@ -162,8 +164,8 @@ class ForwardSolve:
                         fd.as_vector([0, -1, 0]),
                         fd.as_vector([0, 0, 0]),),
                     fd.as_vector([0, 0, 0]),),
-                fd.as_vector([0, 0, 0]),)
-
+                fd.as_vector([0, 0, 0]),)'''
+            T = fd.as_vector([0,-3,0])
             # elasticity parameters, SIMP based E
             self.E = self.E0 + (self.E1 - self.E0) * (self.rho_hat**self.penalisationExponent)
             lambda_ = self.E*self.nu/((1.0 + self.nu)*(1.0 -2.0*self.nu))     # Lambda
