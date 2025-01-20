@@ -6,10 +6,6 @@ from forwardSolve import ForwardSolve
 
 class OptimisationLoop:
     def __init__(self):
-
-        # optimisation parameters
-        #self.maximumNumberOfIterations = 1000
-
         # density field bounds
         self.lowerBound = 0
         self.upperBound = 1
@@ -20,7 +16,7 @@ class OptimisationLoop:
 
         # output folder
         self.outputFolder = ("results/TO" + datetime.datetime.now().strftime("%y_%m-%d-%H-%M-%S") + "/")
-
+        self.outputFolder2 = ("results/")
         # finite-difference test flag
         self.finiteDifferenceValidation = False
 
@@ -39,6 +35,7 @@ class OptimisationLoop:
         # initialise forward solve class
         self.ForwardSolve = ForwardSolve(
             self.outputFolder,
+            self.outputFolder2,
             self.beta,
             self.penalisationExponent,
             self.variableInitialisation,

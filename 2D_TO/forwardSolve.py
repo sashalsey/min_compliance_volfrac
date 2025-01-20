@@ -2,13 +2,13 @@ import numpy as np  # type: ignore
 import firedrake as fd  # type: ignore
 import firedrake.adjoint as fda  # type: ignore
 from firedrake.output import VTKFile # type: ignore
-
 fda.continue_annotation()
 
 class ForwardSolve:
-    def __init__(self, outputFolder, beta, penalisationExponent, variableInitialisation, rho0):
+    def __init__(self, outputFolder, outputFolder2, beta, penalisationExponent, variableInitialisation, rho0):
         # append inputs to class
         self.outputFolder = outputFolder
+        self.outputFolder2 = outputFolder2
 
         # rho initialisation
         self.variableInitialisation = variableInitialisation
@@ -17,7 +17,7 @@ class ForwardSolve:
 
         # material properties
         self.E0 = 1e-6  # [Pa] # void
-        self.E1 = 3000e6  # [Pa] # dense
+        self.E1 = 2.7e9  # [Pa] # dense
         self.nu = 0.3  # []
 
         # pseudo-density functional
@@ -27,13 +27,14 @@ class ForwardSolve:
         self.Vlimit = 0.3
 
     def GenerateMesh(self,):
-        self.mesh = fd.RectangleMesh(self.nx, self.ny, self.lx, self.ly, quadrilateral=True)
+        self.mesh = fd.Mesh('corner.msh')
+        # self.mesh = fd.RectangleMesh(self.nx, self.ny, self.lx, self.ly, quadrilateral=True)
         self.gradientScale = (self.nx * self.ny) / (self.lx * self.ly)  # firedrake bug?
 
     def Setup(self):
         # mesh, functionals and associated static parameters
-        self.nx, self.ny = 120, 60
-        self.lx, self.ly = 0.22, 0.11
+        self.nx, self.ny = 15, 15
+        self.lx, self.ly = 0.5, 0.5
         self.GenerateMesh()
 
         # compute mesh volume
@@ -54,7 +55,7 @@ class ForwardSolve:
 
         # boundary conditions, add ne  by adding new key to dict
         bcDict = {}
-        bcDict[0] = fd.DirichletBC(self.vectorFunctionSpace,fd.Constant((0, 0)), 3)
+        bcDict[0] = fd.DirichletBC(self.vectorFunctionSpace,fd.Constant((0, 0)), 7)
         self.bcs = [bcDict[i] for i in range(len(bcDict.keys()))]
 
         # define output files
@@ -63,6 +64,9 @@ class ForwardSolve:
 
         self.uFile = VTKFile(self.outputFolder + "u.pvd")
         self.uFunction =fd.Function(self.vectorFunctionSpace, name="u")
+
+        self.stressFile = VTKFile(self.outputFolder + "stress.pvd")
+        self.stressFunction = fd.Function(self.functionSpace, name="stress")
 
     def ComputeInitialSolution(self):
 
@@ -154,7 +158,7 @@ class ForwardSolve:
                         fd.as_vector([0, 0]),),
                     fd.as_vector([0, 0]),),
                 fd.as_vector([0, 0]),)'''
-            T = fd.as_vector([0, -30])
+            T = fd.as_vector([0, -1])
             # elasticity parameters
             self.E = self.E0 + (self.E1 - self.E0) * (self.rho_hat**self.penalisationExponent)
             lambda_ = (self.E * self.nu) / ((1 + self.nu) * (1 - 2 * self.nu))
@@ -166,7 +170,7 @@ class ForwardSolve:
             def sigma(u): return lambda_ * fd.div(u) * Id + 2 * mu * epsilon(u)
 
             a = fd.inner(sigma(u), epsilon(v)) * fd.dx
-            L = fd.dot(T, v) * fd.ds(4)
+            L = fd.dot(T, v) * fd.ds(8)
 
             # solve
             u =fd.Function(self.vectorFunctionSpace)
@@ -176,12 +180,24 @@ class ForwardSolve:
             self.uFunction.assign(u)
             self.uFile.write(self.uFunction)
 
+            # stress calculation
+            DG0 = fd.FunctionSpace(self.mesh, "DG", 0)
+            sigma_xx = fd.project(sigma(u)[0, 0], DG0)
+            sigma_yy = fd.project(sigma(u)[1, 1], DG0)
+            sigma_xy = fd.project(sigma(u)[0, 1], DG0)
+            von_mises_stress = fd.sqrt(sigma_xx**2 - sigma_xx * sigma_yy + sigma_yy**2 + 3 * sigma_xy**2)
+            von_mises_proj = fd.project(von_mises_stress, DG0)
+            self.stressFunction.assign(von_mises_proj)
+            self.stressFile.write(self.stressFunction)
+            max_stress = np.max(von_mises_proj.vector().get_local())
+
             # assemble objective function
-            self.j = fd.assemble(fd.inner(T, u) * fd.ds(4))
+            self.j = fd.assemble(fd.inner(T, u) * fd.ds(8))
 
             # volume fraction constraint
-            self.c1 = self.Vlimit - ((1 / self.meshVolume) * fd.assemble(self.rho_hat * fd.dx))
-            print("Volume fraction:", ((1 / self.meshVolume) * fd.assemble(self.rho_hat * fd.dx)))
+            volume_fraction = (1 / self.meshVolume) * fd.assemble(self.rho_hat * fd.dx)
+            self.c1 = self.Vlimit - volume_fraction
+            print("Volume fraction:", volume_fraction)
             # compute objective function sensitivities
             self.djdrho = (fda.compute_gradient(self.j, fda.Control(self.rho)).vector().get_local()) / self.gradientScale
 
@@ -193,6 +209,9 @@ class ForwardSolve:
 
             # assemble jacobian vector, np.concatenate((self.dc1drho, self.dc2drho))
             self.dcdrho = self.dc1drho
+
+            with open(self.outputFolder2 + "combined_iteration_results.txt", "a") as log_file:
+                log_file.write(f"{self.j:.3e}\t{volume_fraction:.4f}\t{max_stress:.3e}\n")
 
         else:
             pass
