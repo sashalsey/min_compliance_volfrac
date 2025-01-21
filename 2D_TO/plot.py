@@ -5,12 +5,16 @@ class plot:
     file_path = "results/combined_iteration_results.txt" 
     data = np.loadtxt(file_path, skiprows=1)
 
-    max_stress = data[:, 2]  # Max stress (Z-axis)
-    volume_fraction = data[:, 1]  # Volume fraction (Y-axis)
+    # Extract data columns
     compliance = data[:, 0]  # Compliance (X-axis)
+    volume_fraction = data[:, 1]  # Volume fraction (Y-axis)
+    max_stress = data[:, 2]  # Max stress (Z-axis)
+    stress_integral_4 = data[:, 3]  # Stress Integral 4
+    stress_integral_12 = data[:, 4]  # Stress Integral 12
+    stress_integral_40 = data[:, 5]  # Stress Integral 40
     iterations = np.arange(1, len(compliance) + 1)  # Iteration numbers
 
-    fig, axes = plt.subplots(1, 2, figsize=(15, 6))
+    fig, axes = plt.subplots(1, 3, figsize=(20, 6))
 
     # Left subplot: Compliance vs. Volume Fraction with color bar for Max Stress
     sc = axes[0].scatter(compliance, volume_fraction, c=max_stress, cmap='viridis', s=50)
@@ -22,7 +26,7 @@ class plot:
     axes[0].set_title("Compliance vs. Volume Fraction with Max Stress")
     axes[0].grid(True, which='both', linestyle='--', linewidth=0.5)
 
-    # Right subplot: Volume Fraction, Max Stress, and Compliance vs. Iteration
+    # Middle subplot: Volume Fraction, Max Stress, and Compliance vs. Iteration
     ax1 = axes[1]
     ax2 = ax1.twinx()  # Create a twin y-axis for max stress
     ax3 = ax1.twinx()  # Create a second twin y-axis for compliance
@@ -44,5 +48,19 @@ class plot:
     axes[1].legend(lns, labels, loc="upper left")
 
     ax1.grid(True, linestyle='--', linewidth=0.5)
+
+    # Right subplot: Stress Integrals vs. Iteration
+    axes[2].plot(iterations, stress_integral_4, 'm-', label="Stress Integral 4")
+    axes[2].plot(iterations, stress_integral_12, 'c-', label="Stress Integral 12")
+    axes[2].plot(iterations, stress_integral_40, 'y-', label="Stress Integral 40")
+
+    axes[2].set_xlabel("Iteration")
+    axes[2].set_ylabel("Stress Integrals")
+    axes[2].set_title("Stress Integrals vs. Iteration")
+    axes[2].legend(loc="upper left")
+    axes[2].grid(True, linestyle='--', linewidth=0.5)
+
+    # Adjust layout for clarity
     plt.tight_layout()
     plt.show()
+

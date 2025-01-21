@@ -24,7 +24,7 @@ class ForwardSolve:
         self.beta = beta  # heaviside projection parameter
         self.eta0 = 0.5  # midpoint of projection filter
 
-        self.Vlimit = 0.3
+        self.Vlimit = 0.2
 
     def GenerateMesh(self,):
         self.mesh = fd.Mesh('corner.msh')
@@ -158,7 +158,7 @@ class ForwardSolve:
                         fd.as_vector([0, 0]),),
                     fd.as_vector([0, 0]),),
                 fd.as_vector([0, 0]),)'''
-            T = fd.as_vector([0, -1])
+            T = fd.as_vector([0, -10])
             # elasticity parameters
             self.E = self.E0 + (self.E1 - self.E0) * (self.rho_hat**self.penalisationExponent)
             lambda_ = (self.E * self.nu) / ((1 + self.nu) * (1 - 2 * self.nu))
@@ -191,6 +191,10 @@ class ForwardSolve:
             self.stressFile.write(self.stressFunction)
             max_stress = np.max(von_mises_proj.vector().get_local())
 
+            stressintegral_4 = fd.assemble( ((von_mises_stress ** 4) * self.rho_hat * fd.dx) ) ** (1/4)
+            stressintegral_12 = fd.assemble( ((von_mises_stress ** 12) * self.rho_hat * fd.dx) ) ** (1/12)
+            stressintegral_40 = fd.assemble( ((von_mises_stress ** 40) * self.rho_hat * fd.dx) ) ** (1/40)
+
             # assemble objective function
             self.j = fd.assemble(fd.inner(T, u) * fd.ds(8))
 
@@ -211,7 +215,7 @@ class ForwardSolve:
             self.dcdrho = self.dc1drho
 
             with open(self.outputFolder2 + "combined_iteration_results.txt", "a") as log_file:
-                log_file.write(f"{self.j:.3e}\t{volume_fraction:.4f}\t{max_stress:.3e}\n")
+                log_file.write(f"{self.j:.3e}\t{volume_fraction:.4f}\t{max_stress:.3e}\t{stressintegral_4:.3e}\t{stressintegral_12:.3e}\t{stressintegral_40:.3e}\n")
 
         else:
             pass
