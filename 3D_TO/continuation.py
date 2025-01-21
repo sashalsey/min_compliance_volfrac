@@ -23,7 +23,7 @@ for i in range(continuationSteps):
     cont_start = time.time()
     # initialise optimisation class
     optimisationClass = OptimisationLoop()
-    optimisationClass.maximumNumberOfIterations = 20
+    optimisationClass.maximumNumberOfIterations = 40
     optimisationClass.beta = betaContinuationList[i]
 
     # determine if this is the first iteration of continuation

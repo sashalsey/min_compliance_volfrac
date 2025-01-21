@@ -26,16 +26,16 @@ class ForwardSolve:
         self.beta = beta  # heaviside projection parameter
         self.eta0 = 0.5  # midpoint of projection filter
 
-        self.Vlimit = 0.3
+        self.Vlimit = 0.2
 
     def GenerateMesh(self,):
-        self.mesh = fd.Mesh('cylinder.msh')
+        self.mesh = fd.Mesh('cylinder6.msh')
         #self.mesh = fd.BoxMesh(self.nx, self.ny, self.nz, self.lx, self.ly, self.lz, hexahedral=False, diagonal='default')
         self.gradientScale = (self.nx * self.ny * self.nz) / (self.lx * self.ly * self.lz)  # firedrake bug?
 
     def Setup(self):
         # mesh, functionals and associated static parameters
-        self.nx, self.ny, self.nz = 20, 20, 20
+        self.nx, self.ny, self.nz = 40, 40, 20
         self.lx, self.ly, self.lz = 0.24, 0.24, 0.1
         self.cellsize = self.lx / self.nx
         self.GenerateMesh()
@@ -58,7 +58,7 @@ class ForwardSolve:
 
         # boundary conditions
         bcDict = {}
-        bcDict[0] = fd.DirichletBC(self.vectorFunctionSpace, fd.Constant((0, 0, 0)), 1)
+        bcDict[0] = fd.DirichletBC(self.vectorFunctionSpace, fd.Constant((0, 0, 0)), 7)
         self.bcs = [bcDict[i] for i in range(len(bcDict.keys()))]
 
         # define output files
@@ -176,7 +176,7 @@ class ForwardSolve:
 
             # linear elastic weak variational form
             a = fd.inner(sigma(u), epsilon(v)) * fd.dx
-            L = fd.dot(T, v) * fd.ds(2)
+            L = fd.dot(T, v) * fd.ds(6)
 
             # solve
             u = fd.Function(self.vectorFunctionSpace)
@@ -203,7 +203,7 @@ class ForwardSolve:
             max_stress = np.max(von_mises_proj.vector().get_local())
 
             # assemble objective function
-            self.j = fd.assemble(fd.inner(T, u) * fd.ds(2))
+            self.j = fd.assemble(fd.inner(T, u) * fd.ds(6))
 
             # volume fraction constraint
             volume_fraction = ((1 / self.meshVolume) * fd.assemble(self.rho_hat * fd.dx))
