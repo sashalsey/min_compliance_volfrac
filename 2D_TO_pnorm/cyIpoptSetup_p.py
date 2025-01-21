@@ -1,7 +1,7 @@
 import numpy as np # type: ignore
 import cyipopt # type: ignore
 
-def CyIpoptWrapper(optimisationClass):
+def CyIpoptWrapper_p(optimisationClass):
     numberOfVariables = len(optimisationClass.djdrho)
     numberOfConstraints = len(optimisationClass.c)
 
@@ -10,9 +10,9 @@ def CyIpoptWrapper(optimisationClass):
     upperBounds = np.ones(numberOfVariables) * optimisationClass.upperBound
 
     # constraint bounds
-    # constraint 1 - volume fraction constraint
-    constraintLowerBounds = np.array([0])
-    constraintUpperBounds = np.array([0])
+    # constraint 1 - volume fraction, 2 - stress
+    constraintLowerBounds = np.array([0, 0])
+    constraintUpperBounds = np.array([0, 0])
 
     # cyipopt class
     class OptimisationSetup:

@@ -4,8 +4,8 @@ import firedrake.adjoint as fda  # type: ignore
 from firedrake.output import VTKFile # type: ignore
 fda.continue_annotation()
 
-class ForwardSolve:
-    def __init__(self, outputFolder, outputFolder2, beta, penalisationExponent, variableInitialisation, rho0):
+class ForwardSolve_p:
+    def __init__(self, outputFolder, outputFolder2, beta, penalisationExponent, variableInitialisation, rho0, pnorm):
         # append inputs to class
         self.outputFolder = outputFolder
         self.outputFolder2 = outputFolder2
@@ -25,6 +25,8 @@ class ForwardSolve:
         self.eta0 = 0.5  # midpoint of projection filter
 
         self.Vlimit = 0.2
+        self.Slimit = 30
+        self.pnorm = pnorm
 
     def GenerateMesh(self,):
         self.mesh = fd.Mesh('corner.msh')
@@ -198,20 +200,24 @@ class ForwardSolve:
             volume_fraction = (1 / self.meshVolume) * fd.assemble(self.rho_hat * fd.dx)
             self.c1 = self.Vlimit - volume_fraction
 
+            stressintegral = fd.assemble( ((von_mises_stress ** self.pnorm) * self.rho_hat * fd.dx) ) ** (1/self.pnorm)
+            self.c2 = self.Slimit - stressintegral
+
             # compute objective function sensitivities
             self.djdrho = (fda.compute_gradient(self.j, fda.Control(self.rho)).vector().get_local()) / self.gradientScale
 
             # compute constraint sensitivities
             self.dc1drho = (fda.compute_gradient(self.c1, fda.Control(self.rho)).vector().get_local()) / self.gradientScale
+            self.dc2drho = (fda.compute_gradient(self.c2, fda.Control(self.rho)).vector().get_local()) / self.gradientScale
 
             # assemble constraint vector
-            self.c = np.array([self.c1])
+            self.c = np.array([self.c1, self.c2])
 
             # assemble jacobian vector, np.concatenate((self.dc1drho, self.dc2drho))
-            self.dcdrho = self.dc1drho
-            stressintegral = fd.assemble( ((von_mises_stress ** 4) * self.rho_hat * fd.dx) ) ** (1/4)
+            self.dcdrho = np.concatenate((self.dc1drho, self.dc2drho))
+
             with open(self.outputFolder2 + "combined_iteration_results.txt", "a") as log_file:
-                log_file.write(f"{self.j:.3e}\t{volume_fraction:.4f}\t{max_stress:.3e}\t{stressintegral}\n")
+                log_file.write(f"{self.j:.3e}\t{volume_fraction:.4f}\t{max_stress:.3e}\t{stressintegral:.3e}\n")
 
         else:
             pass

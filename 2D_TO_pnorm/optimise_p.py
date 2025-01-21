@@ -2,9 +2,9 @@ import datetime
 import numpy as np # type: ignore
 import sys
 from finiteDifferenceValidation import FiniteDifferenceValidation
-from forwardSolve import ForwardSolve
+from forwardSolve_p import ForwardSolve_p
 
-class OptimisationLoop:
+class OptimisationLoop_p:
     def __init__(self):
         # density field bounds
         self.lowerBound = 0
@@ -13,6 +13,7 @@ class OptimisationLoop:
         # continuation parameters
         self.beta = None
         self.penalisationExponent = 3  # fixed at present
+        self.pnorm = None
 
         # output folder
         self.outputFolder = ("results/TO" + datetime.datetime.now().strftime("%y_%m-%d-%H-%M-%S") + "/")
@@ -33,13 +34,14 @@ class OptimisationLoop:
     def OptimisationSetup(self):
 
         # initialise forward solve class
-        self.ForwardSolve = ForwardSolve(
+        self.ForwardSolve = ForwardSolve_p(
             self.outputFolder,
             self.outputFolder2,
             self.beta,
             self.penalisationExponent,
             self.variableInitialisation,
-            self.rho0,)
+            self.rho0,
+            self.pnorm,)
 
         # setup forward solve (mesh, function spaces, boundary conditions etc)
         # mesh: needs changing
@@ -95,7 +97,6 @@ class OptimisationLoop:
 
     def Objective(self, designVariables):
         self.j, self.djdrho, self.c, self.dcdrho = self.ForwardSolve.Solve(designVariables)
-        print("Objective Function: ", self.j * self.gradientScaling)
         return self.j
 
     def Gradient(self, designVariables):
@@ -104,7 +105,6 @@ class OptimisationLoop:
 
     def Constraints(self, designVariables):
         self.j, self.djdrho, self.c, self.dcdrho = self.ForwardSolve.Solve(designVariables)
-        print("Volume Fraction:    ", self.c[0])  # *self.constraintScaling[0])
         return self.c
 
     def Jacobian(self, designVariables):
