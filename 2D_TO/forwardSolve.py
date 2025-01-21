@@ -24,16 +24,16 @@ class ForwardSolve:
         self.beta = beta  # heaviside projection parameter
         self.eta0 = 0.5  # midpoint of projection filter
 
-        self.Vlimit = 0.2
+        self.Vlimit = 0.3
 
     def GenerateMesh(self,):
-        self.mesh = fd.Mesh('corner.msh')
+        self.mesh = fd.Mesh('corner2.msh')
         # self.mesh = fd.RectangleMesh(self.nx, self.ny, self.lx, self.ly, quadrilateral=True)
         self.gradientScale = (self.nx * self.ny) / (self.lx * self.ly)  # firedrake bug?
 
     def Setup(self):
         # mesh, functionals and associated static parameters
-        self.nx, self.ny = 15, 15
+        self.nx, self.ny = 40, 40
         self.lx, self.ly = 0.5, 0.5
         self.GenerateMesh()
 
@@ -191,8 +191,8 @@ class ForwardSolve:
             self.stressFile.write(self.stressFunction)
             max_stress = np.max(von_mises_proj.vector().get_local())
 
-            stressintegral_4 = fd.assemble( ((von_mises_stress ** 8) * self.rho_hat * fd.dx) ) ** (1/8)
-            stressintegral_12 = fd.assemble( ((von_mises_stress ** 10) * self.rho_hat * fd.dx) ) ** (1/10)
+            stressintegral_4 = fd.assemble( ((von_mises_stress ** 4) * self.rho_hat * fd.dx) ) ** (1/4)
+            stressintegral_12 = fd.assemble( ((von_mises_stress ** 8) * self.rho_hat * fd.dx) ) ** (1/8)
             stressintegral_40 = fd.assemble( ((von_mises_stress ** 12) * self.rho_hat * fd.dx) ) ** (1/12)
 
             # assemble objective function

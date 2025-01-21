@@ -50,8 +50,8 @@ class plot:
     ax1.grid(True, linestyle='--', linewidth=0.5)
 
     # Right subplot: Stress Integrals vs. Iteration
-    axes[2].plot(iterations, stress_integral_4, 'm-', label="Stress Integral 8")
-    axes[2].plot(iterations, stress_integral_12, 'c-', label="Stress Integral 10")
+    axes[2].plot(iterations, stress_integral_4, 'm-', label="Stress Integral 4")
+    axes[2].plot(iterations, stress_integral_12, 'c-', label="Stress Integral 8")
     axes[2].plot(iterations, stress_integral_40, 'y-', label="Stress Integral 12")
 
     axes[2].set_xlabel("Iteration")
