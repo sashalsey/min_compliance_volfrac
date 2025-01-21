@@ -1,0 +1,7 @@
+1. pyMMAOpt
+source .bash_profile firedrake_25_10_2024
+2. IPopt
+source .bash_profile firedrake_21_11_2024
+
+cd pythonEnvironments/GitHub/PhD/TO/Class/1
+python 

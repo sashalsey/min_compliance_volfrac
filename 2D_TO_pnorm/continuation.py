@@ -7,8 +7,8 @@ import time
 start = time.time()
 # continuation loop
 continuationSteps = 4
-betaContinuationList = [4,8,16] #[2 ** (i + 1) for i in range(continuationSteps)]
-pnormList = [4, 4, 4]
+betaContinuationList = [2 ** (i + 1) for i in range(continuationSteps)]
+pnormList = 8
 
 # flake8 initialisation bug
 rhoOptimal = None
@@ -59,7 +59,7 @@ for i in range(3):
     optimisationClass = OptimisationLoop_p()
     optimisationClass.maximumNumberOfIterations = 100
     optimisationClass.beta = betaContinuationList[i]
-    optimisationClass.pnorm = pnormList[i]
+    optimisationClass.pnorm = pnormList
 
     # determine if this is the first iteration of continuation
     if i == 0:

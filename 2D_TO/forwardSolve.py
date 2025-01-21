@@ -27,14 +27,14 @@ class ForwardSolve:
         self.Vlimit = 0.3
 
     def GenerateMesh(self,):
-        self.mesh = fd.Mesh('corner2.msh')
+        self.mesh = fd.Mesh('corner3.msh')
         # self.mesh = fd.RectangleMesh(self.nx, self.ny, self.lx, self.ly, quadrilateral=True)
         self.gradientScale = (self.nx * self.ny) / (self.lx * self.ly)  # firedrake bug?
 
     def Setup(self):
         # mesh, functionals and associated static parameters
-        self.nx, self.ny = 40, 40
-        self.lx, self.ly = 0.5, 0.5
+        self.nx, self.ny = 50, 50
+        self.lx, self.ly = 1.0, 1.0
         self.GenerateMesh()
 
         # compute mesh volume
@@ -158,7 +158,16 @@ class ForwardSolve:
                         fd.as_vector([0, 0]),),
                     fd.as_vector([0, 0]),),
                 fd.as_vector([0, 0]),)'''
-            T = fd.as_vector([0, -1])
+            T = fd.conditional(fd.gt(x, 0.95),
+                    fd.conditional(fd.lt(x, 1),
+                    fd.conditional(fd.gt(y, 0.35),
+                    fd.conditional(fd.lt(y, 0.4),
+                        fd.as_vector([0, -1]),
+                    fd.as_vector([0, 0]),),
+                    fd.as_vector([0, 0]),),
+                    fd.as_vector([0, 0]),),
+                    fd.as_vector([0, 0]),)
+
             # elasticity parameters
             self.E = self.E0 + (self.E1 - self.E0) * (self.rho_hat**self.penalisationExponent)
             lambda_ = (self.E * self.nu) / ((1 + self.nu) * (1 - 2 * self.nu))

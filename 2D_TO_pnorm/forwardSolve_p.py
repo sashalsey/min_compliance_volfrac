@@ -25,17 +25,17 @@ class ForwardSolve_p:
         self.eta0 = 0.5  # midpoint of projection filter
 
         self.Vlimit = 0.2
-        self.Slimit = 30
+        self.Slimit = 15
         self.pnorm = pnorm
 
     def GenerateMesh(self,):
-        self.mesh = fd.Mesh('corner.msh')
+        self.mesh = fd.Mesh('corner2.msh')
         # self.mesh = fd.RectangleMesh(self.nx, self.ny, self.lx, self.ly, quadrilateral=True)
         self.gradientScale = (self.nx * self.ny) / (self.lx * self.ly)  # firedrake bug?
 
     def Setup(self):
         # mesh, functionals and associated static parameters
-        self.nx, self.ny = 15, 15
+        self.nx, self.ny = 40, 40
         self.lx, self.ly = 0.5, 0.5
         self.GenerateMesh()
 
@@ -160,7 +160,7 @@ class ForwardSolve_p:
                         fd.as_vector([0, 0]),),
                     fd.as_vector([0, 0]),),
                 fd.as_vector([0, 0]),)'''
-            T = fd.as_vector([0, -10])
+            T = fd.as_vector([0, -1])
             # elasticity parameters
             self.E = self.E0 + (self.E1 - self.E0) * (self.rho_hat**self.penalisationExponent)
             lambda_ = (self.E * self.nu) / ((1 + self.nu) * (1 - 2 * self.nu))
