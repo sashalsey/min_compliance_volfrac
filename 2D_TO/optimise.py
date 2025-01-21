@@ -95,7 +95,6 @@ class OptimisationLoop:
 
     def Objective(self, designVariables):
         self.j, self.djdrho, self.c, self.dcdrho = self.ForwardSolve.Solve(designVariables)
-        print("Objective Function: ", self.j * self.gradientScaling)
         return self.j
 
     def Gradient(self, designVariables):
@@ -104,7 +103,6 @@ class OptimisationLoop:
 
     def Constraints(self, designVariables):
         self.j, self.djdrho, self.c, self.dcdrho = self.ForwardSolve.Solve(designVariables)
-        print("Volume Fraction:    ", self.c[0])  # *self.constraintScaling[0])
         return self.c
 
     def Jacobian(self, designVariables):

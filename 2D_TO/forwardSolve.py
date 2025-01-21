@@ -158,7 +158,7 @@ class ForwardSolve:
                         fd.as_vector([0, 0]),),
                     fd.as_vector([0, 0]),),
                 fd.as_vector([0, 0]),)'''
-            T = fd.as_vector([0, -10])
+            T = fd.as_vector([0, -1])
             # elasticity parameters
             self.E = self.E0 + (self.E1 - self.E0) * (self.rho_hat**self.penalisationExponent)
             lambda_ = (self.E * self.nu) / ((1 + self.nu) * (1 - 2 * self.nu))
@@ -191,9 +191,9 @@ class ForwardSolve:
             self.stressFile.write(self.stressFunction)
             max_stress = np.max(von_mises_proj.vector().get_local())
 
-            stressintegral_4 = fd.assemble( ((von_mises_stress ** 4) * self.rho_hat * fd.dx) ) ** (1/4)
-            stressintegral_12 = fd.assemble( ((von_mises_stress ** 12) * self.rho_hat * fd.dx) ) ** (1/12)
-            stressintegral_40 = fd.assemble( ((von_mises_stress ** 40) * self.rho_hat * fd.dx) ) ** (1/40)
+            stressintegral_4 = fd.assemble( ((von_mises_stress ** 8) * self.rho_hat * fd.dx) ) ** (1/8)
+            stressintegral_12 = fd.assemble( ((von_mises_stress ** 10) * self.rho_hat * fd.dx) ) ** (1/10)
+            stressintegral_40 = fd.assemble( ((von_mises_stress ** 12) * self.rho_hat * fd.dx) ) ** (1/12)
 
             # assemble objective function
             self.j = fd.assemble(fd.inner(T, u) * fd.ds(8))
@@ -201,7 +201,7 @@ class ForwardSolve:
             # volume fraction constraint
             volume_fraction = (1 / self.meshVolume) * fd.assemble(self.rho_hat * fd.dx)
             self.c1 = self.Vlimit - volume_fraction
-            print("Volume fraction:", volume_fraction)
+
             # compute objective function sensitivities
             self.djdrho = (fda.compute_gradient(self.j, fda.Control(self.rho)).vector().get_local()) / self.gradientScale
 
