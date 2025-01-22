@@ -18,7 +18,6 @@ resultsFile = open(outputFolder2 + "combined_iteration_results.txt", "w")
 resultsFile.write("Compliance\tVolume Fraction\tMax Stress\n")
 resultsFile.close()
 
-contime = [0 * i for i in range(continuationSteps)]
 for i in range(continuationSteps):
     cont_start = time.time()
     # initialise optimisation class
@@ -52,10 +51,9 @@ for i in range(continuationSteps):
     gradientScaling = optimisationClass.gradientScaling
     constraintScaling = optimisationClass.constraintScaling
     jacobianScaling = optimisationClass.jacobianScaling
-    cont_end = time.time()
-    contime[i] = cont_end - cont_start
+
 end = time.time()
 print("Total time ", (end - start))
-print("Cont time ", contime)
+
 from plot import plot
 plot()

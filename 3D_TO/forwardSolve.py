@@ -26,16 +26,16 @@ class ForwardSolve:
         self.beta = beta  # heaviside projection parameter
         self.eta0 = 0.5  # midpoint of projection filter
 
-        self.Vlimit = 0.2
+        self.Vlimit = 0.15
 
     def GenerateMesh(self,):
-        self.mesh = fd.Mesh('cylinder6.msh')
+        self.mesh = fd.Mesh('cylinder_big.msh')
         #self.mesh = fd.BoxMesh(self.nx, self.ny, self.nz, self.lx, self.ly, self.lz, hexahedral=False, diagonal='default')
         self.gradientScale = (self.nx * self.ny * self.nz) / (self.lx * self.ly * self.lz)  # firedrake bug?
 
     def Setup(self):
         # mesh, functionals and associated static parameters
-        self.nx, self.ny, self.nz = 40, 40, 20
+        self.nx, self.ny, self.nz = 30, 30, 12
         self.lx, self.ly, self.lz = 0.24, 0.24, 0.1
         self.cellsize = self.lx / self.nx
         self.GenerateMesh()
@@ -55,10 +55,10 @@ class ForwardSolve:
 
         # compute helmholtz filter radius - calc average element length
         self.helmholtzFilterRadius = 1 * (self.meshVolume / self.mesh.num_cells()) ** (1 / self.mesh.cell_dimension())
-
+        
         # boundary conditions
         bcDict = {}
-        bcDict[0] = fd.DirichletBC(self.vectorFunctionSpace, fd.Constant((0, 0, 0)), 7)
+        bcDict[0] = fd.DirichletBC(self.vectorFunctionSpace, fd.Constant((0, 0, 0)), 5)
         self.bcs = [bcDict[i] for i in range(len(bcDict.keys()))]
 
         # define output files
@@ -156,16 +156,15 @@ class ForwardSolve:
 
             # define surface traction
             x, y, z = fd.SpatialCoordinate(self.mesh)
-            '''
-            T = fd.conditional(fd.gt(x, self.lx - self.cellsize),
-                    fd.conditional(fd.gt(y, self.ly / 2 - self.cellsize),
-                    fd.conditional(
-                        fd.lt(y, self.ly / 2 + self.cellsize),
+            r = fd.sqrt(x**2 + y**2)
+            T = fd.conditional(fd.gt(z, 0.1 - 1e-8),
+                fd.conditional(fd.gt(r, 0.08),
+                fd.conditional(fd.lt(r, 0.10),
                         fd.as_vector([0, -1, 0]),
                         fd.as_vector([0, 0, 0]),),
-                    fd.as_vector([0, 0, 0]),),
-                fd.as_vector([0, 0, 0]),)'''
-            T = fd.as_vector([0,-3,0])
+                        fd.as_vector([0, 0, 0]),),
+                        fd.as_vector([0, 0, 0]),)
+
             # elasticity parameters, SIMP based E
             self.E = self.E0 + (self.E1 - self.E0) * (self.rho_hat**self.penalisationExponent)
             lambda_ = self.E*self.nu/((1.0 + self.nu)*(1.0 -2.0*self.nu))     # Lambda
@@ -176,7 +175,7 @@ class ForwardSolve:
 
             # linear elastic weak variational form
             a = fd.inner(sigma(u), epsilon(v)) * fd.dx
-            L = fd.dot(T, v) * fd.ds(6)
+            L = fd.dot(T, v) * fd.ds(4)
 
             # solve
             u = fd.Function(self.vectorFunctionSpace)
@@ -203,7 +202,7 @@ class ForwardSolve:
             max_stress = np.max(von_mises_proj.vector().get_local())
 
             # assemble objective function
-            self.j = fd.assemble(fd.inner(T, u) * fd.ds(6))
+            self.j = fd.assemble(fd.inner(T, u) * fd.ds(4))
 
             # volume fraction constraint
             volume_fraction = ((1 / self.meshVolume) * fd.assemble(self.rho_hat * fd.dx))
