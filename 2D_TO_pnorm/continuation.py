@@ -57,7 +57,7 @@ for i in range(2):
 # Volume and stress constrained
 for i in range(3):
     optimisationClass = OptimisationLoop_p()
-    optimisationClass.maximumNumberOfIterations = 100
+    optimisationClass.maximumNumberOfIterations = 200
     optimisationClass.beta = betaContinuationList[i]
     optimisationClass.pnorm = pnormList
 
