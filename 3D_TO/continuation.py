@@ -4,8 +4,8 @@ import time
 
 start = time.time()
 # continuation loop
-continuationSteps = 4
-betaContinuationList = [2 ** (i + 1) for i in range(continuationSteps)]
+continuationSteps = 1
+betaContinuationList = 4 #[2 ** (i + 1) for i in range(continuationSteps)]
 
 # flake8 initialisation bug
 rhoOptimal = None
@@ -22,8 +22,8 @@ for i in range(continuationSteps):
     cont_start = time.time()
     # initialise optimisation class
     optimisationClass = OptimisationLoop()
-    optimisationClass.maximumNumberOfIterations = 40
-    optimisationClass.beta = betaContinuationList[i]
+    optimisationClass.maximumNumberOfIterations = 100
+    optimisationClass.beta = betaContinuationList #[i]
 
     # determine if this is the first iteration of continuation
     if i == 0:
@@ -43,7 +43,7 @@ for i in range(continuationSteps):
     optimisationClass.OptimisationSetup()
 
     # execute optimisation procedure using ipopt
-    print("Beta:               ", betaContinuationList[i])
+    print("Beta:               ", betaContinuationList)#[i])
     print("")
     rhoOptimal = CyIpoptWrapper(optimisationClass)
 

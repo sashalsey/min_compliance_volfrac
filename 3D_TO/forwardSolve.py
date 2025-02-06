@@ -7,8 +7,6 @@ fda.continue_annotation()
 
 class ForwardSolve:
     def __init__(self, outputFolder, outputFolder2, beta, penalisationExponent, variableInitialisation, rho0):
-
-        # append inputs to class
         self.outputFolder = outputFolder
         self.outputFolder2 = outputFolder2
 
@@ -26,17 +24,15 @@ class ForwardSolve:
         self.beta = beta  # heaviside projection parameter
         self.eta0 = 0.5  # midpoint of projection filter
 
-        self.Vlimit = 0.15
+        self.Vlimit = 0.8
 
     def GenerateMesh(self,):
-        self.mesh = fd.Mesh('cylinder_big.msh')
-        #self.mesh = fd.BoxMesh(self.nx, self.ny, self.nz, self.lx, self.ly, self.lz, hexahedral=False, diagonal='default')
+        self.mesh = fd.BoxMesh(self.nx, self.ny, self.nz, self.lx, self.ly, self.lz, hexahedral=False, diagonal='default')
         self.gradientScale = (self.nx * self.ny * self.nz) / (self.lx * self.ly * self.lz)  # firedrake bug?
 
     def Setup(self):
-        # mesh, functionals and associated static parameters
-        self.nx, self.ny, self.nz = 30, 30, 12
-        self.lx, self.ly, self.lz = 0.24, 0.24, 0.1
+        self.nx, self.ny, self.nz = 50, 12, 12
+        self.lx, self.ly, self.lz = 0.5, 0.12, 0.12
         self.cellsize = self.lx / self.nx
         self.GenerateMesh()
 
@@ -44,7 +40,7 @@ class ForwardSolve:
         self.meshVolume = fd.assemble(1 * fd.dx(domain=self.mesh))
 
         # define function spaces
-        self.functionSpace = fd.FunctionSpace(self.mesh, "DG", 0)
+        self.functionSpace = fd.FunctionSpace(self.mesh, "CG", 1)
         self.vectorFunctionSpace = fd.VectorFunctionSpace(self.mesh, "CG", 1)
 
         # define psuedo-density function
@@ -54,11 +50,11 @@ class ForwardSolve:
         self.numberOfNodes = len(self.rho.vector().get_local())
 
         # compute helmholtz filter radius - calc average element length
-        self.helmholtzFilterRadius = 1 * (self.meshVolume / self.mesh.num_cells()) ** (1 / self.mesh.cell_dimension())
+        self.helmholtzFilterRadius = 2 * (self.meshVolume / self.mesh.num_cells()) ** (1 / self.mesh.cell_dimension())
         
         # boundary conditions
         bcDict = {}
-        bcDict[0] = fd.DirichletBC(self.vectorFunctionSpace, fd.Constant((0, 0, 0)), 5)
+        bcDict[0] = fd.DirichletBC(self.vectorFunctionSpace, fd.Constant((0, 0, 0)), 1)
         self.bcs = [bcDict[i] for i in range(len(bcDict.keys()))]
 
         # define output files
@@ -123,19 +119,8 @@ class ForwardSolve:
             u = fd.TrialFunction(self.functionSpace)
             v = fd.TestFunction(self.functionSpace)
 
-            # DG specific relations
-            n = fd.FacetNormal(self.mesh)
-            h = 2 * fd.CellDiameter(self.mesh)
-            h_avg = (h("+") + h("-")) / 2
-            alpha = 1
-
             # weak variational form
-            a = (fd.Constant(self.helmholtzFilterRadius) ** 2) * (
-                fd.dot(fd.grad(v), fd.grad(u)) * fd.dx
-                - fd.dot(fd.avg(fd.grad(v)), fd.jump(u, n)) * fd.dS
-                - fd.dot(fd.jump(v, n), fd.avg(fd.grad(u))) * fd.dS
-                + alpha / h_avg * fd.dot(fd.jump(v, n), fd.jump(u, n)) * fd.dS
-            ) + fd.inner(u, v) * fd.dx
+            a = (fd.Constant(self.helmholtzFilterRadius) ** 2) * fd.inner(fd.grad(u), fd.grad(v)) * fd.dx + fd.inner(u, v) * fd.dx
             L = fd.inner(self.rho, v) * fd.dx
 
             # solve helmholtz equation
@@ -156,14 +141,17 @@ class ForwardSolve:
 
             # define surface traction
             x, y, z = fd.SpatialCoordinate(self.mesh)
-            r = fd.sqrt(x**2 + y**2)
-            T = fd.conditional(fd.gt(z, 0.1 - 1e-8),
-                fd.conditional(fd.gt(r, 0.08),
-                fd.conditional(fd.lt(r, 0.10),
+            T = fd.conditional(fd.gt(x, self.lx - self.cellsize),
+                    fd.conditional(fd.gt(y, self.ly / 2 - self.cellsize),
+                    fd.conditional(fd.lt(y, self.ly / 2 + self.cellsize),
+                                   fd.conditional(fd.gt(z, self.lz / 2 - self.cellsize),
+                                    fd.conditional(fd.lt(z, self.lz / 2 + self.cellsize),
                         fd.as_vector([0, -1, 0]),
                         fd.as_vector([0, 0, 0]),),
-                        fd.as_vector([0, 0, 0]),),
-                        fd.as_vector([0, 0, 0]),)
+                    fd.as_vector([0, 0, 0]),),
+                fd.as_vector([0, 0, 0]),),
+                fd.as_vector([0, 0, 0]),),
+                fd.as_vector([0, 0, 0]),)
 
             # elasticity parameters, SIMP based E
             self.E = self.E0 + (self.E1 - self.E0) * (self.rho_hat**self.penalisationExponent)
@@ -175,7 +163,7 @@ class ForwardSolve:
 
             # linear elastic weak variational form
             a = fd.inner(sigma(u), epsilon(v)) * fd.dx
-            L = fd.dot(T, v) * fd.ds(4)
+            L = fd.dot(T, v) * fd.ds(2)
 
             # solve
             u = fd.Function(self.vectorFunctionSpace)
@@ -186,7 +174,7 @@ class ForwardSolve:
             self.uFile.write(self.uFunction)
 
             # stress calculation
-            DG0 = fd.FunctionSpace(self.mesh, "DG", 0)
+            DG0 = fd.FunctionSpace(self.mesh, "CG", 1)
 
             sigma_xx = fd.project(sigma(u)[0, 0], DG0)
             sigma_yy = fd.project(sigma(u)[1, 1], DG0)
@@ -202,7 +190,7 @@ class ForwardSolve:
             max_stress = np.max(von_mises_proj.vector().get_local())
 
             # assemble objective function
-            self.j = fd.assemble(fd.inner(T, u) * fd.ds(4))
+            self.j = fd.assemble(fd.inner(T, u) * fd.ds(2))
 
             # volume fraction constraint
             volume_fraction = ((1 / self.meshVolume) * fd.assemble(self.rho_hat * fd.dx))
