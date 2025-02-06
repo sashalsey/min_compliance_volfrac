@@ -5,3 +5,8 @@ source .bash_profile firedrake_21_11_2024
 
 cd pythonEnvironments/GitHub/PhD/TO/Class/1
 python 
+
+
+Gordon
+ssh sh1420@ae-rhewson-ulx.dept.ic.ac.uk
+source .bash_profile firedrake_22_01_2025
