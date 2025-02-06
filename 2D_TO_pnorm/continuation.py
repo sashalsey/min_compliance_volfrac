@@ -7,7 +7,7 @@ import time
 start = time.time()
 # continuation loop
 continuationSteps = 4
-betaContinuationList = [2 ** (i + 1) for i in range(continuationSteps)]
+betaContinuationList = 4 #[2 ** (i + 1) for i in range(continuationSteps)]
 pnormList = 8
 
 # flake8 initialisation bug
@@ -22,10 +22,10 @@ resultsFile.write("Compliance\tVolume Fraction\tMax Stress\tStress Integral\n")
 resultsFile.close()
 
 # Volume constrained only
-for i in range(2):
+for i in range(1):
     optimisationClass = OptimisationLoop()
     optimisationClass.maximumNumberOfIterations = 100
-    optimisationClass.beta = betaContinuationList[i]
+    optimisationClass.beta = betaContinuationList
 
     # determine if this is the first iteration of continuation
     if i == 0:
@@ -45,7 +45,7 @@ for i in range(2):
     optimisationClass.OptimisationSetup()
 
     # execute optimisation procedure using ipopt
-    print("Beta:               ", betaContinuationList[i])
+    print("Beta:               ", betaContinuationList)
     print("")
     rhoOptimal = CyIpoptWrapper(optimisationClass)
 
@@ -58,7 +58,7 @@ for i in range(2):
 for i in range(3):
     optimisationClass = OptimisationLoop_p()
     optimisationClass.maximumNumberOfIterations = 200
-    optimisationClass.beta = betaContinuationList[i]
+    optimisationClass.beta = betaContinuationList
     optimisationClass.pnorm = pnormList
 
     # determine if this is the first iteration of continuation
@@ -79,7 +79,7 @@ for i in range(3):
     optimisationClass.OptimisationSetup()
 
     # execute optimisation procedure using ipopt
-    print("Beta:               ", betaContinuationList[i])
+    print("Beta:               ", betaContinuationList)
     print("")
     rhoOptimal = CyIpoptWrapper_p(optimisationClass)
 
