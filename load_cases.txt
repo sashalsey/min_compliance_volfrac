@@ -1,0 +1,28 @@
+# Original load case, loading on RHS
+T = fd.conditional(fd.gt(x, self.lx - self.cellsize),
+                    fd.conditional(fd.gt(y, self.ly / 2 - self.cellsize),
+                    fd.conditional(
+                        fd.lt(y, self.ly / 2 + self.cellsize),
+                        fd.as_vector([0, -1, 0]),
+                        fd.as_vector([0, 0, 0]),),
+                    fd.as_vector([0, 0, 0]),),
+                fd.as_vector([0, 0, 0]),)
+Load on 2
+Dirichlet on 1
+
+# Radial load on cylinder
+r = fd.sqrt(x**2 + y**2)
+            T = fd.conditional(fd.gt(z, 0.1 - 1e-8),
+                fd.conditional(fd.gt(r, 0.1),
+                fd.conditional(fd.lt(r, 0.12),
+                        fd.as_vector([0, -1, 0]),
+                        fd.as_vector([0, 0, 0]),),
+                        fd.as_vector([0, 0, 0]),),
+                        fd.as_vector([0, 0, 0]),)
+
+# Cylinder
+Load on 4, Dirichlet on 5
+
+# Helmholtx filter non-DG specific
+a = (fd.Constant(self.helmholtzFilterRadius) ** 2) * fd.inner(fd.grad(u), fd.grad(v)) * fd.dx + fd.inner(u, v) * fd.dx
+                
