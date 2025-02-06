@@ -41,7 +41,7 @@ class ForwardSolve:
         self.meshVolume = fd.assemble(1 * fd.dx(domain=self.mesh))
 
         # define function spaces
-        self.functionSpace = fd.FunctionSpace(self.mesh, "DG", 0)
+        self.functionSpace = fd.FunctionSpace(self.mesh, "CG", 1)
         self.vectorFunctionSpace = fd.VectorFunctionSpace(self.mesh, "CG", 2)
 
         # define psuedo-density function
@@ -96,8 +96,7 @@ class ForwardSolve:
                 cache = True
 
             else:
-                # new array is unique
-                # assign current array to cache
+                # new array is unique, assign current array to cache
                 self.rho_np_previous = designVariables
 
                 # update self.rho
@@ -109,8 +108,7 @@ class ForwardSolve:
         return cache
 
     def Solve(self, designVariables):
-        # insert and cache design variables
-        # automatically updates self.rho
+        # insert and cache design variables, automatically updates self.rho
         identicalVariables = self.CacheDesignVariables(designVariables)
 
         if identicalVariables is False:
@@ -119,7 +117,7 @@ class ForwardSolve:
             v = fd.TestFunction(self.functionSpace)
 
             # DG specific relations
-            n = fd.FacetNormal(self.mesh)
+            '''n = fd.FacetNormal(self.mesh)
             h = 2 * fd.CellDiameter(self.mesh)
             h_avg = (h("+") + h("-")) / 2
             alpha = 1
@@ -130,7 +128,8 @@ class ForwardSolve:
                 - fd.dot(fd.avg(fd.grad(v)), fd.jump(u, n)) * fd.dS
                 - fd.dot(fd.jump(v, n), fd.avg(fd.grad(u))) * fd.dS
                 + alpha / h_avg * fd.dot(fd.jump(v, n), fd.jump(u, n)) * fd.dS
-            ) + fd.inner(u, v) * fd.dx
+            ) + fd.inner(u, v) * fd.dx'''
+            a = (fd.Constant(self.helmholtzFilterRadius) ** 2) * fd.inner(fd.grad(u), fd.grad(v)) * fd.dx + fd.inner(u, v) * fd.dx
             L = fd.inner(self.rho, v) * fd.dx
 
             # solve helmholtz equation
@@ -182,7 +181,7 @@ class ForwardSolve:
             self.uFile.write(self.uFunction)
 
             # stress calculation
-            DG0 = fd.FunctionSpace(self.mesh, "DG", 0)
+            DG0 = fd.FunctionSpace(self.mesh, "CG", 1)
             sigma_xx = fd.project(sigma(u)[0, 0], DG0)
             sigma_yy = fd.project(sigma(u)[1, 1], DG0)
             sigma_xy = fd.project(sigma(u)[0, 1], DG0)
