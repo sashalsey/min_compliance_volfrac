@@ -5,25 +5,17 @@ class plot:
     file_path = "results/combined_iteration_results.txt" 
     data = np.loadtxt(file_path, skiprows=1)
 
-    max_stress = data[:, 2]  # Max stress (Z-axis)
-    volume_fraction = data[:, 1]  # Volume fraction (Y-axis)
+    # Extract data columns
     compliance = data[:, 0]  # Compliance (X-axis)
+    volume_fraction = data[:, 1]  # Volume fraction (Y-axis)
+    max_stress = data[:, 2]  # Max stress (Z-axis)
+    stress_integral = data[:, 3]  # Stress Integral
     iterations = np.arange(1, len(compliance) + 1)  # Iteration numbers
 
-    fig, axes = plt.subplots(1, 2, figsize=(15, 6))
+    fig, axes = plt.subplots(1, 2, figsize=(20, 6))
 
-    # Left subplot: Compliance vs. Volume Fraction with color bar for Max Stress
-    sc = axes[0].scatter(compliance, volume_fraction, c=max_stress, cmap='viridis', s=50)
-    cbar = plt.colorbar(sc, ax=axes[0])
-    cbar.set_label("Max Stress (Pa)")
-    axes[0].set_xscale('log')  # Logarithmic scale for compliance
-    axes[0].set_xlabel("Compliance (1/Nm)")
-    axes[0].set_ylabel("Volume Fraction")
-    axes[0].set_title("Compliance vs. Volume Fraction with Max Stress")
-    axes[0].grid(True, which='both', linestyle='--', linewidth=0.5)
-
-    # Right subplot: Volume Fraction, Max Stress, and Compliance vs. Iteration
-    ax1 = axes[1]
+    # Middle subplot: Volume Fraction, Max Stress, and Compliance vs. Iteration
+    ax1 = axes[0]
     ax2 = ax1.twinx()  # Create a twin y-axis for max stress
     ax3 = ax1.twinx()  # Create a second twin y-axis for compliance
     ax3.spines['right'].set_position(('outward', 60))
@@ -37,12 +29,25 @@ class plot:
     ax1.set_ylabel("Volume Fraction", color='b')
     ax2.set_ylabel("Max Stress (Pa)", color='r')
     ax3.set_ylabel("Compliance (1/Nm)", color='g')
-    axes[1].set_title("Volume Fraction, Max Stress, and Compliance vs. Iteration")
+    axes[0].set_title("Volume Fraction, Max Stress, and Compliance vs. Iteration")
 
     lns = ln1 + ln2 + ln3
     labels = [l.get_label() for l in lns]
-    axes[1].legend(lns, labels, loc="upper left")
+    axes[0].legend(lns, labels, loc="upper left")
 
     ax1.grid(True, linestyle='--', linewidth=0.5)
+
+    # Right subplot: Stress Integrals vs. Iteration
+    axes[1].plot(iterations, stress_integral, 'm-', label="Stress Integral")
+
+    axes[1].set_xlabel("Iteration")
+    axes[1].set_ylabel("Stress Integrals")
+    axes[1].set_title("Stress Integrals vs. Iteration")
+    axes[1].legend(loc="upper left")
+    axes[1].grid(True, linestyle='--', linewidth=0.5)
+
+    # Adjust layout for clarity
     plt.tight_layout()
     plt.show()
+    print(volume_fraction[-1], " ", compliance[-1], " ", max_stress[-1])
+
