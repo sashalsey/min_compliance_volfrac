@@ -21,7 +21,7 @@ class ForwardSolve:
         self.nu = 0.3  # []
 
         # pseudo-density functional
-        self.beta = beta  # heaviside projection parameter
+        self.beta = beta # heaviside projection parameter
         self.eta0 = 0.5  # midpoint of projection filter
 
         self.Vlimit = 0.3
@@ -118,19 +118,8 @@ class ForwardSolve:
             u = fd.TrialFunction(self.functionSpace)
             v = fd.TestFunction(self.functionSpace)
 
-            # DG specific relations
-            n = fd.FacetNormal(self.mesh)
-            h = 2 * fd.CellDiameter(self.mesh)
-            h_avg = (h("+") + h("-")) / 2
-            alpha = 1
-
             # weak variational form
-            a = (fd.Constant(self.helmholtzFilterRadius) ** 2) * (
-                fd.dot(fd.grad(v), fd.grad(u)) * fd.dx
-                - fd.dot(fd.avg(fd.grad(v)), fd.jump(u, n)) * fd.dS
-                - fd.dot(fd.jump(v, n), fd.avg(fd.grad(u))) * fd.dS
-                + alpha / h_avg * fd.dot(fd.jump(v, n), fd.jump(u, n)) * fd.dS
-            ) + fd.inner(u, v) * fd.dx
+            a = (fd.Constant(self.helmholtzFilterRadius) ** 2) * fd.inner(fd.grad(u), fd.grad(v)) * fd.dx + fd.inner(u, v) * fd.dx
             L = fd.inner(self.rho, v) * fd.dx
 
             # solve helmholtz equation
@@ -151,14 +140,7 @@ class ForwardSolve:
 
             # define surface traction
             x, y = fd.SpatialCoordinate(self.mesh)
-            '''T = fd.conditional(fd.gt(x, 0.3 - (0.3 / 360) - 1e-8),
-                fd.conditional(fd.gt(y, 0.05 - 3 * (0.1 / 120) - 1e-8),
-                    fd.conditional(fd.lt(y, 0.05 + 3 * (0.1 / 120) + 1e-8),
-                        fd.as_vector([0, -1]),
-                        fd.as_vector([0, 0]),),
-                    fd.as_vector([0, 0]),),
-                fd.as_vector([0, 0]),)'''
-            T = fd.conditional(fd.gt(x, 0.95),
+            T = fd.conditional(fd.gt(x, 0.8),
                     fd.conditional(fd.lt(x, 1),
                     fd.conditional(fd.gt(y, 0.35),
                     fd.conditional(fd.lt(y, 0.4),
@@ -200,10 +182,6 @@ class ForwardSolve:
             self.stressFile.write(self.stressFunction)
             max_stress = np.max(von_mises_proj.vector().get_local())
 
-            stressintegral_4 = fd.assemble( ((von_mises_stress ** 4) * self.rho_hat * fd.dx) ) ** (1/4)
-            stressintegral_12 = fd.assemble( ((von_mises_stress ** 8) * self.rho_hat * fd.dx) ) ** (1/8)
-            stressintegral_40 = fd.assemble( ((von_mises_stress ** 12) * self.rho_hat * fd.dx) ) ** (1/12)
-
             # assemble objective function
             self.j = fd.assemble(fd.inner(T, u) * fd.ds(8))
 
@@ -224,7 +202,7 @@ class ForwardSolve:
             self.dcdrho = self.dc1drho
 
             with open(self.outputFolder2 + "combined_iteration_results.txt", "a") as log_file:
-                log_file.write(f"{self.j:.3e}\t{volume_fraction:.4f}\t{max_stress:.3e}\t{stressintegral_4:.3e}\t{stressintegral_12:.3e}\t{stressintegral_40:.3e}\n")
+                log_file.write(f"{self.j:.3e}\t{volume_fraction:.4f}\t{max_stress:.3e}\n")
 
         else:
             pass
